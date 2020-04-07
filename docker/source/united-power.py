@@ -4,6 +4,8 @@ import os
 import sys
 import time
 import datetime
+import csv
+import logging
 from os import listdir
 from os.path import isfile, join
 from datetime import timedelta
@@ -18,6 +20,8 @@ from selenium.webdriver.common.by import By
 from selenium.common.exceptions import TimeoutException
 from bs4 import BeautifulSoup
 
+logging.basicConfig(format='%(asctime)s - %(message)s', level=logging.INFO)
+log = logging.getLogger(__name__)
 
 username = os.environ["UNITED_POWER_USERNAME"]
 password = os.environ["UNITED_POWER_PASSWORD"]
@@ -45,11 +49,11 @@ def get_demand_charge():
         },
     )
 
-    print("Starting query of power portal")
+    log.info("Starting query of power portal")
     # driver = webdriver.Firefox()
     driver = webdriver.Chrome(options=chrome_options)
     # Load the login page, populate username/password
-    print("getting main website URL")
+    log.info("getting main website URL")
     driver.get(base_url)
     try:
         myElem = WebDriverWait(driver, 20).until(
@@ -66,9 +70,9 @@ def get_demand_charge():
         driver.find_element_by_id(
             "_com_liferay_login_web_portlet_LoginPortlet_loginSubmitBtn"
         ).click()
-        print("Submitted login credentials, goto main account page")
+        log.info("Submitted login credentials, goto main account page")
     except TimeoutException:
-        print("Loading took too much time!")
+        log.error("Loading main authenticated page too much time!")
         return False
 
     # From main page, click "My Consumption Data"
@@ -80,7 +84,7 @@ def get_demand_charge():
         )
         driver.find_element_by_xpath("//span[text()='My Consumption Data']").click()
     except TimeoutException:
-        print("Loading took too much time!")
+        log.error("Loading My Consumption Data took too much time!")
         return False
 
     # The initial data load can take a loooooooong time to load. So wait until the
@@ -89,9 +93,9 @@ def get_demand_charge():
         myElem = WebDriverWait(driver, 240).until(
             EC.presence_of_element_located((By.ID, "chartContainer"))
         )
-        print("Chart data loaded")
+        log.info("Chart data loaded")
     except TimeoutException:
-        print("Loading took too much time!")
+        log.error("Loading the chart data took too much time!")
         return False
 
     # Now on main account page with chart loaded, set timeframe to 7 days, month type calendar month
@@ -102,14 +106,14 @@ def get_demand_charge():
         )
         select = Select(driver.find_element_by_id("timeViews"))
         select.select_by_value("CurrentMonth")
-        print("Changed graph view to CurrentMonth")
+        log.info("Changed graph view to CurrentMonth")
     except TimeoutException:
-        print("Loading took too much time!")
+        log.error("Changing graph to CurrentMonth timed out!")
         return False
 
     # Change Month from calendar to billing
     try:
-        myElem = WebDriverWait(driver, 10).until(
+        myElem = WebDriverWait(driver, 20).until(
             EC.presence_of_element_located(
                 (By.CSS_SELECTOR, "input[type='radio'][value='billing']")
             )
@@ -117,9 +121,9 @@ def get_demand_charge():
         driver.find_element_by_css_selector(
             "input[type='radio'][value='billing']"
         ).click()
-        print("Changed month from current to billing")
+        log.info("Changed month from current to billing")
     except TimeoutException:
-        print("Did not select billing month radio button in time")
+        log.info("Did not select billing month radio button in time")
         return False
 
     # Click on Highcharts menu and download the formatted CVS file to /tmp
@@ -131,7 +135,7 @@ def get_demand_charge():
         driver.find_element_by_class_name("highcharts-button").click()
         # With menu opened...
         driver.find_element_by_xpath("//div[text()='Export Formatted CSV']").click()
-        print("formatted CSV download started")
+        log.info("formatted CSV download started")
 
         wait_until = datetime.datetime.now() + timedelta(seconds=30)
         break_loop = False
@@ -142,18 +146,35 @@ def get_demand_charge():
                 break_loop = True
             time.sleep(2)
         if break_loop:
-            print("/tmp/export.csv file not downloaded")
+            log.error("/tmp/export.csv file not downloaded")
             return False
         # File download completed
         return "/tmp/export.csv"
-
     except TimeoutException:
-        print("Loading took too much time!")
+        log.error("Attempting to download CSV timed out!")
         return False
+
+
+def max_demand(csv_file):
+    """Return the date and highest demand value"""
+    demand = []
+    with open(csv_file) as f:
+        for row in csv.DictReader(f, skipinitialspace=True):
+            demand.append(row)
+
+    max_demand = 0.0
+    demand_record = {}
+    for row in demand:
+        if float(row["Demand (kW)"]) > max_demand:
+            max_demand = float(row["Demand (kW)"])
+            demand_record.clear()
+            demand_record[row["Timeperiod"]] = float(row["Demand (kW)"])
+    return demand_record
 
 
 if __name__ == "__main__":
     # Get the demand charge CSV from United Power
     csv_file = get_demand_charge()
+    demand_kw = max_demand(csv_file)
 
-    
+    print(f"Maximum demand details: {demand_kw}")
