@@ -20,7 +20,7 @@ from selenium.webdriver.common.by import By
 from selenium.common.exceptions import TimeoutException
 from bs4 import BeautifulSoup
 
-logging.basicConfig(format='%(asctime)s - %(message)s', level=logging.INFO)
+logging.basicConfig(format="%(asctime)s - %(message)s", level=logging.INFO)
 log = logging.getLogger(__name__)
 
 username = os.environ["UNITED_POWER_USERNAME"]
@@ -88,10 +88,12 @@ def get_demand_charge():
         return False
 
     # The initial data load can take a loooooooong time to load. So wait until the
-    # chart title loads
+    # highcharts SVG fully rendered with a title containing "Metered"
     try:
         myElem = WebDriverWait(driver, 240).until(
-            EC.presence_of_element_located((By.ID, "chartContainer"))
+            EC.presence_of_element_located(
+                (By.XPATH, "//*[contains(text(),'Metered')]")
+            )
         )
         log.info("Chart data loaded")
     except TimeoutException:
