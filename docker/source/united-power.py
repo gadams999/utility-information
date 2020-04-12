@@ -100,6 +100,12 @@ def get_demand_charge():
         log.error("Loading the chart data took too much time!")
         return False
 
+    # Appears to be a timing issue when the dataset has fully loaded and when the demand CSV is available
+    # Adding wait to let highcharts dataset settle before interacting with buttons
+    log.info("Waiting 2 seconds before interacting with dataset")
+    time.sleep(2)
+    log.info("Nap over, change to curent month->billing month->download formatted CSV")
+
     # Now on main account page with chart loaded, set timeframe to 7 days, month type calendar month
     # Change to Timeframe -> Current Month
     try:
@@ -120,13 +126,16 @@ def get_demand_charge():
                 (By.CSS_SELECTOR, "input[type='radio'][value='billing']")
             )
         )
-        driver.find_element_by_css_selector(
-            "input[type='radio'][value='billing']"
-        ).click()
+        print(f"billing month element: {driver.find_element_by_id('c_billingMonth')}")
+        driver.find_element_by_id("c_billingMonth").click()
+        # driver.find_element_by_css_selector(
+        #     "input[type='radio'][value='billing']"
+        # ).click()
         log.info("Changed month from current to billing")
     except TimeoutException:
         log.info("Did not select billing month radio button in time")
         return False
+
 
     # Click on Highcharts menu and download the formatted CVS file to /tmp
     try:
@@ -163,6 +172,7 @@ def max_demand(csv_file):
     with open(csv_file) as f:
         for row in csv.DictReader(f, skipinitialspace=True):
             demand.append(row)
+        log.info(f"Total contents of CSV file: {demand}")
 
     max_demand = 0.0
     demand_record = {}
