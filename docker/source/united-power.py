@@ -126,7 +126,6 @@ def get_demand_charge():
                 (By.CSS_SELECTOR, "input[type='radio'][value='billing']")
             )
         )
-        print(f"billing month element: {driver.find_element_by_id('c_billingMonth')}")
         driver.find_element_by_id("c_billingMonth").click()
         # driver.find_element_by_css_selector(
         #     "input[type='radio'][value='billing']"
@@ -136,6 +135,10 @@ def get_demand_charge():
         log.info("Did not select billing month radio button in time")
         return False
 
+    # Still getting random CSV for calendar month, what a bit for starting download
+    log.info("Waiting 2 seconds before selecting dropdown menu")
+    time.sleep(2)
+    log.info("Nap over, click on dropdown for Exported Formatted CSV")
 
     # Click on Highcharts menu and download the formatted CVS file to /tmp
     try:
