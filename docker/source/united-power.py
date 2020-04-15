@@ -20,7 +20,7 @@ from selenium.webdriver.common.by import By
 from selenium.common.exceptions import TimeoutException
 from bs4 import BeautifulSoup
 
-logging.basicConfig(format="%(asctime)s - %(message)s", level=logging.INFO)
+logging.basicConfig(format="%(asctime)s - %(message)s", level=logging.DEBUG)
 log = logging.getLogger(__name__)
 
 username = os.environ["UNITED_POWER_USERNAME"]
@@ -100,11 +100,11 @@ def get_demand_charge():
         log.error("Loading the chart data took too much time!")
         return False
 
-    # Appears to be a timing issue when the dataset has fully loaded and when the demand CSV is available
-    # Adding wait to let highcharts dataset settle before interacting with buttons
-    log.info("Waiting 2 seconds before interacting with dataset")
-    time.sleep(2)
-    log.info("Nap over, change to curent month->billing month->download formatted CSV")
+    # # Appears to be a timing issue when the dataset has fully loaded and when the demand CSV is available
+    # # Adding wait to let highcharts dataset settle before interacting with buttons
+    # log.info("Waiting 2 seconds before interacting with dataset")
+    # time.sleep(2)
+    # log.info("Nap over, change to curent month->billing month->download formatted CSV")
 
     # Now on main account page with chart loaded, set timeframe to 7 days, month type calendar month
     # Change to Timeframe -> Current Month
@@ -122,11 +122,14 @@ def get_demand_charge():
     # Change Month from calendar to billing
     try:
         myElem = WebDriverWait(driver, 20).until(
-            EC.presence_of_element_located(
-                (By.CSS_SELECTOR, "input[type='radio'][value='billing']")
+            # EC.presence_of_element_located(
+            EC.element_to_be_clickable(
+                (By.ID,"c_billingMonth")
+                # (By.CSS_SELECTOR, "input[type='radio'][value='billing']")
             )
         )
-        driver.find_element_by_id("c_billingMonth").click()
+        # Ensure button 
+        webElement = driver.find_element_by_id("c_billingMonth").click()
         # driver.find_element_by_css_selector(
         #     "input[type='radio'][value='billing']"
         # ).click()
@@ -148,6 +151,9 @@ def get_demand_charge():
         )
         driver.find_element_by_class_name("highcharts-button").click()
         # With menu opened...
+        myElem = WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.XPATH, "//div[text()='Export Formatted CSV']"))
+        )
         driver.find_element_by_xpath("//div[text()='Export Formatted CSV']").click()
         log.info("formatted CSV download started")
 
@@ -172,24 +178,30 @@ def get_demand_charge():
 def max_demand(csv_file):
     """Return the date and highest demand value"""
     demand = []
-    with open(csv_file) as f:
-        for row in csv.DictReader(f, skipinitialspace=True):
-            demand.append(row)
-        log.info(f"Total contents of CSV file: {demand}")
+    try:
+        with open(csv_file) as f:
+            for row in csv.DictReader(f, skipinitialspace=True):
+                demand.append(row)
 
-    max_demand = 0.0
-    demand_record = {}
-    for row in demand:
-        if float(row["Demand (kW)"]) > max_demand:
-            max_demand = float(row["Demand (kW)"])
-            demand_record.clear()
-            demand_record[row["Timeperiod"]] = float(row["Demand (kW)"])
-    return demand_record
+        max_demand = 0.0
+        demand_record = {}
+        for row in demand:
+            if float(row["Demand (kW)"]) > max_demand:
+                max_demand = float(row["Demand (kW)"])
+                demand_record.clear()
+                demand_record[row["Timeperiod"]] = float(row["Demand (kW)"])
+        return demand_record
+    except KeyError as e:
+        # Expected 'Demand (kW)', let's try again
+        log.error(f"Expected 'Demand (kW)', may have recieved wrong file")
+        log.info(f"Total contents of bad CSV file:\n {demand}\n\n")
+        return False
 
 
 if __name__ == "__main__":
     # Get the demand charge CSV from United Power
+
     csv_file = get_demand_charge()
     demand_kw = max_demand(csv_file)
-
-    print(f"Maximum demand details: {demand_kw}")
+    if demand_kw:
+        print(f"Demand record: {demand_kw}")
