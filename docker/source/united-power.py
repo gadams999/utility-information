@@ -20,7 +20,7 @@ from selenium.webdriver.common.by import By
 from selenium.common.exceptions import TimeoutException
 from bs4 import BeautifulSoup
 
-logging.basicConfig(format="%(asctime)s - %(message)s", level=logging.DEBUG)
+logging.basicConfig(format="%(asctime)s - %(message)s", level=logging.INFO)
 log = logging.getLogger(__name__)
 
 username = os.environ["UNITED_POWER_USERNAME"]
@@ -49,11 +49,12 @@ def get_demand_charge():
         },
     )
 
+    log.info("Loading webdriver for Chrome")
     log.info("Starting query of power portal")
     # driver = webdriver.Firefox()
     driver = webdriver.Chrome(options=chrome_options)
     # Load the login page, populate username/password
-    log.info("getting main website URL")
+    log.info("Loading main website URL")
     driver.get(base_url)
     try:
         myElem = WebDriverWait(driver, 20).until(
@@ -77,11 +78,13 @@ def get_demand_charge():
 
     # From main page, click "My Consumption Data"
     try:
+        log.info("Waiting for My Consumption Data link")
         myElem = WebDriverWait(driver, 10).until(
             EC.presence_of_element_located(
                 (By.XPATH, "//span[text()='My Consumption Data']")
             )
         )
+        log.info("Selecting My Consumption Data link, this may take a long time to load (minutes)")
         driver.find_element_by_xpath("//span[text()='My Consumption Data']").click()
     except TimeoutException:
         log.error("Loading My Consumption Data took too much time!")
@@ -90,6 +93,7 @@ def get_demand_charge():
     # The initial data load can take a loooooooong time to load. So wait until the
     # highcharts SVG fully rendered with a title containing "Metered"
     try:
+        log.info("Waiting for Chart data set to load")
         myElem = WebDriverWait(driver, 240).until(
             EC.presence_of_element_located(
                 (By.XPATH, "//*[contains(text(),'Metered')]")
@@ -100,27 +104,24 @@ def get_demand_charge():
         log.error("Loading the chart data took too much time!")
         return False
 
-    # # Appears to be a timing issue when the dataset has fully loaded and when the demand CSV is available
-    # # Adding wait to let highcharts dataset settle before interacting with buttons
-    # log.info("Waiting 2 seconds before interacting with dataset")
-    # time.sleep(2)
-    # log.info("Nap over, change to curent month->billing month->download formatted CSV")
-
     # Now on main account page with chart loaded, set timeframe to 7 days, month type calendar month
     # Change to Timeframe -> Current Month
     try:
+        log.info("Waiting for timeViews elements to load")
         myElem = WebDriverWait(driver, 10).until(
             EC.presence_of_element_located((By.ID, "timeViews"))
         )
+        log.info('Selecting "Current Month" radio button')
         select = Select(driver.find_element_by_id("timeViews"))
         select.select_by_value("CurrentMonth")
         log.info("Changed graph view to CurrentMonth")
     except TimeoutException:
-        log.error("Changing graph to CurrentMonth timed out!")
+        log.error("Changing graph to Current Month timed out!")
         return False
 
     # Change Month from calendar to billing
     try:
+        log.info('Waiting for "Billing Month" radio button to be clickable')
         myElem = WebDriverWait(driver, 20).until(
             # EC.presence_of_element_located(
             EC.element_to_be_clickable(
@@ -128,24 +129,25 @@ def get_demand_charge():
                 # (By.CSS_SELECTOR, "input[type='radio'][value='billing']")
             )
         )
-        # Ensure button 
-        webElement = driver.find_element_by_id("c_billingMonth").click()
+        log.info("Selecting Billing Month")
+        driver.find_element_by_id("c_billingMonth").click()
         # driver.find_element_by_css_selector(
         #     "input[type='radio'][value='billing']"
         # ).click()
         log.info("Changed month from current to billing")
     except TimeoutException:
-        log.info("Did not select billing month radio button in time")
+        log.info("Error select ingbilling month radio button")
         return False
 
-    # Still getting random CSV for calendar month, what a bit for starting download
-    log.info("Waiting 2 seconds before selecting dropdown menu")
-    time.sleep(2)
-    log.info("Nap over, click on dropdown for Exported Formatted CSV")
+    # # Still getting random CSV for calendar month, what a bit for starting download
+    # log.info("Waiting 2 seconds before selecting dropdown menu")
+    # time.sleep(2)
+    # log.info("Nap over, click on dropdown for Exported Formatted CSV")
 
     # Click on Highcharts menu and download the formatted CVS file to /tmp
     try:
         # Click the menu
+        log.info('Waiting for download menu, then selecting "Export Formatted CSV"')
         myElem = WebDriverWait(driver, 10).until(
             EC.presence_of_element_located((By.CLASS_NAME, "highcharts-button"))
         )
@@ -154,9 +156,10 @@ def get_demand_charge():
         myElem = WebDriverWait(driver, 10).until(
             EC.presence_of_element_located((By.XPATH, "//div[text()='Export Formatted CSV']"))
         )
+        # TODO - verify that /tmp/export.csv does not exist
+        log.info('Clicking on "Export Formatted CSV" link')
         driver.find_element_by_xpath("//div[text()='Export Formatted CSV']").click()
         log.info("formatted CSV download started")
-
         wait_until = datetime.datetime.now() + timedelta(seconds=30)
         break_loop = False
         while not break_loop:
@@ -169,6 +172,7 @@ def get_demand_charge():
             log.error("/tmp/export.csv file not downloaded")
             return False
         # File download completed
+        log.info("CSV file has completed download")
         return "/tmp/export.csv"
     except TimeoutException:
         log.error("Attempting to download CSV timed out!")
@@ -191,9 +195,9 @@ def max_demand(csv_file):
                 demand_record.clear()
                 demand_record[row["Timeperiod"]] = float(row["Demand (kW)"])
         return demand_record
-    except KeyError as e:
+    except KeyError:
         # Expected 'Demand (kW)', let's try again
-        log.error(f"Expected 'Demand (kW)', may have recieved wrong file")
+        log.error(f"Expected 'Demand (kW)', may have received wrong file")
         log.info(f"Total contents of bad CSV file:\n {demand}\n\n")
         return False
 
