@@ -206,6 +206,11 @@ if __name__ == "__main__":
     # Get the demand charge CSV from United Power
 
     csv_file = get_demand_charge()
-    demand_kw = max_demand(csv_file)
-    if demand_kw:
-        print(f"Demand record: {demand_kw}")
+    if csv_file:
+        demand_kw = max_demand(csv_file)
+        if demand_kw:
+            print(f"Demand record: {demand_kw}")
+        else:
+            log.error("Could not read CSV properly")
+    else:
+        log.error("Could not scrape website")
