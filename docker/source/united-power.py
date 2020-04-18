@@ -51,15 +51,15 @@ def get_demand_charge():
 
     log.info("Loading webdriver for Chrome")
     log.info("Starting query of power portal")
-    # driver = webdriver.Firefox()
     driver = webdriver.Chrome(options=chrome_options)
+
     # Load the login page, populate username/password
     log.info("Loading main website URL")
     driver.get(base_url)
     try:
         myElem = WebDriverWait(driver, 20).until(
-            EC.presence_of_element_located(
-                (By.ID, "_com_liferay_login_web_portlet_LoginPortlet_login")
+            EC.element_to_be_clickable(
+                (By.ID, "_com_liferay_login_web_portlet_LoginPortlet_loginSubmitBtn")
             )
         )
         driver.find_element_by_id(
@@ -79,8 +79,8 @@ def get_demand_charge():
     # From main page, click "My Consumption Data"
     try:
         log.info("Waiting for My Consumption Data link")
-        myElem = WebDriverWait(driver, 10).until(
-            EC.presence_of_element_located(
+        myElem = WebDriverWait(driver, 20).until(
+            EC.element_to_be_clickable(
                 (By.XPATH, "//span[text()='My Consumption Data']")
             )
         )
@@ -123,38 +123,33 @@ def get_demand_charge():
     try:
         log.info('Waiting for "Billing Month" radio button to be clickable')
         myElem = WebDriverWait(driver, 20).until(
-            # EC.presence_of_element_located(
             EC.element_to_be_clickable(
                 (By.ID,"c_billingMonth")
-                # (By.CSS_SELECTOR, "input[type='radio'][value='billing']")
             )
         )
         log.info("Selecting Billing Month")
         driver.find_element_by_id("c_billingMonth").click()
-        # driver.find_element_by_css_selector(
-        #     "input[type='radio'][value='billing']"
-        # ).click()
         log.info("Changed month from current to billing")
     except TimeoutException:
         log.info("Error select ingbilling month radio button")
         return False
-
-    # # Still getting random CSV for calendar month, what a bit for starting download
-    # log.info("Waiting 2 seconds before selecting dropdown menu")
-    # time.sleep(2)
-    # log.info("Nap over, click on dropdown for Exported Formatted CSV")
 
     # Click on Highcharts menu and download the formatted CVS file to /tmp
     try:
         # Click the menu
         log.info('Waiting for download menu, then selecting "Export Formatted CSV"')
         myElem = WebDriverWait(driver, 10).until(
-            EC.presence_of_element_located((By.CLASS_NAME, "highcharts-button"))
+            EC.element_to_be_clickable(
+                (By.CLASS_NAME,"highcharts-button")
+            )
         )
         driver.find_element_by_class_name("highcharts-button").click()
+
         # With menu opened...
         myElem = WebDriverWait(driver, 10).until(
-            EC.presence_of_element_located((By.XPATH, "//div[text()='Export Formatted CSV']"))
+            EC.element_to_be_clickable(
+                (By.XPATH,"//div[text()='Export Formatted CSV']")
+            )
         )
         # TODO - verify that /tmp/export.csv does not exist
         log.info('Clicking on "Export Formatted CSV" link')
