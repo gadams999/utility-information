@@ -79,7 +79,7 @@ def get_demand_charge():
     # From main page, click "My Consumption Data"
     try:
         log.info("Waiting for My Consumption Data link")
-        myElem = WebDriverWait(driver, 20).until(
+        myElem = WebDriverWait(driver, 60).until(
             EC.element_to_be_clickable(
                 (By.XPATH, "//span[text()='My Consumption Data']")
             )
@@ -185,7 +185,7 @@ def max_demand(csv_file):
         max_demand = 0.0
         demand_record = {}
         for row in demand:
-            if float(row["Demand (kW)"]) > max_demand:
+            if float(row["Demand (kW)"]) >= max_demand:
                 max_demand = float(row["Demand (kW)"])
                 demand_record.clear()
                 demand_record[row["Timeperiod"]] = float(row["Demand (kW)"])
