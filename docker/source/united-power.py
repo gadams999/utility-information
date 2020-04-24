@@ -89,7 +89,9 @@ def get_demand_charge():
                 (By.XPATH, "//span[text()='My Consumption Data']")
             )
         )
-        log.info("Selecting My Consumption Data link, this may take a long time to load (minutes)")
+        log.info(
+            "Selecting My Consumption Data link, this may take a long time to load (minutes)"
+        )
         driver.find_element_by_xpath("//span[text()='My Consumption Data']").click()
     except TimeoutException:
         log.error("Loading My Consumption Data took too much time!")
@@ -128,9 +130,7 @@ def get_demand_charge():
     try:
         log.info('Waiting for "Billing Month" radio button to be clickable')
         myElem = WebDriverWait(driver, 20).until(
-            EC.element_to_be_clickable(
-                (By.ID,"c_billingMonth")
-            )
+            EC.element_to_be_clickable((By.ID, "c_billingMonth"))
         )
         log.info("Selecting Billing Month")
         driver.find_element_by_id("c_billingMonth").click()
@@ -144,16 +144,14 @@ def get_demand_charge():
         # Click the menu
         log.info('Waiting for download menu, then selecting "Export Formatted CSV"')
         myElem = WebDriverWait(driver, 10).until(
-            EC.element_to_be_clickable(
-                (By.CLASS_NAME,"highcharts-button")
-            )
+            EC.element_to_be_clickable((By.CLASS_NAME, "highcharts-button"))
         )
         driver.find_element_by_class_name("highcharts-button").click()
 
         # With menu opened...
         myElem = WebDriverWait(driver, 10).until(
             EC.element_to_be_clickable(
-                (By.XPATH,"//div[text()='Export Formatted CSV']")
+                (By.XPATH, "//div[text()='Export Formatted CSV']")
             )
         )
         # TODO - verify that /tmp/export.csv does not exist
@@ -172,7 +170,7 @@ def get_demand_charge():
             log.error("/tmp/export.csv file not downloaded")
             return False
         # File download completed
-        log.info("CSV file has completed download")            
+        log.info("CSV file has completed download")
         return "/tmp/export.csv"
     except TimeoutException:
         log.error("Attempting to download CSV timed out!")
