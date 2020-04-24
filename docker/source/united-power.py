@@ -20,7 +20,12 @@ from selenium.webdriver.common.by import By
 from selenium.common.exceptions import TimeoutException
 from bs4 import BeautifulSoup
 
-logging.basicConfig(format="%(asctime)s - %(message)s", level=logging.INFO)
+if "LOG_LEVEL" in os.environ:
+    level = logging.getLevelName(os.environ["LOG_LEVEL"])
+else:
+    level = logging.getLevelName("INFO")
+
+logging.basicConfig(format="%(asctime)s - %(message)s", level=level)
 log = logging.getLogger(__name__)
 
 username = os.environ["UNITED_POWER_USERNAME"]
@@ -167,7 +172,7 @@ def get_demand_charge():
             log.error("/tmp/export.csv file not downloaded")
             return False
         # File download completed
-        log.info("CSV file has completed download")
+        log.info("CSV file has completed download")            
         return "/tmp/export.csv"
     except TimeoutException:
         log.error("Attempting to download CSV timed out!")
@@ -181,11 +186,16 @@ def max_demand(csv_file):
         with open(csv_file) as f:
             for row in csv.DictReader(f, skipinitialspace=True):
                 demand.append(row)
+                if logging.getLevelName(log.getEffectiveLevel()) == "DEBUG":
+                    print(row)
 
-        max_demand = 0.0
         demand_record = {}
-        for row in demand:
-            if float(row["Demand (kW)"]) >= max_demand:
+        for index, row in enumerate(demand):
+            if index == 0:
+                # Use first row as initial demand - can be negative based on solar
+                max_demand = float(row["Demand (kW)"])
+                demand_record[row["Timeperiod"]] = float(row["Demand (kW)"])
+            elif float(row["Demand (kW)"]) > max_demand:
                 max_demand = float(row["Demand (kW)"])
                 demand_record.clear()
                 demand_record[row["Timeperiod"]] = float(row["Demand (kW)"])
