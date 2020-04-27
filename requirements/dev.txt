@@ -2,3 +2,4 @@
 pylint
 black
 pytest
+pytest-selenium
