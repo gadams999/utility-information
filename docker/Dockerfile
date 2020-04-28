@@ -27,8 +27,8 @@ RUN ln -s /usr/bin/geckodriver /usr/bin/chromium-browser \
     && chmod 777 /usr/bin/geckodriver \
     && chmod 777 /usr/bin/chromium-browser
 
-COPY ../source/united-power.py .
-COPY ../source/requirements/prod.txt .
+COPY .united-power.py .
+COPY ./requirements/prod.txt .
 
 RUN pip install -r prod.txt
 
