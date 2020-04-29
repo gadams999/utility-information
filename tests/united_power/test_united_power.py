@@ -5,4 +5,5 @@ from united_power.usage import UnitedPowerUsage
 
 
 def test_create_object():
-    driver = UnitedPowerUsage('http://foo.com', 'username', 'password')
+    united_power = UnitedPowerUsage('http://foo.com', 'username', 'password')
+
