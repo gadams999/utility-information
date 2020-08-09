@@ -18,7 +18,7 @@ RUN wget -q "https://chromedriver.storage.googleapis.com/80.0.3987.106/chromedri
     && rm /tmp/chromedriver.zip
 
 # xvfb - X server display
-ADD xvfb-chromium /usr/bin/xvfb-chromium
+ADD ./xvfb-chromium /usr/bin/xvfb-chromium
 RUN ln -s /usr/bin/xvfb-chromium /usr/bin/google-chrome \
     && chmod 777 /usr/bin/xvfb-chromium
 
@@ -27,7 +27,7 @@ RUN ln -s /usr/bin/geckodriver /usr/bin/chromium-browser \
     && chmod 777 /usr/bin/geckodriver \
     && chmod 777 /usr/bin/chromium-browser
 
-COPY .united-power.py .
+COPY ./united-power.py .
 COPY ./requirements/prod.txt .
 
 RUN pip install -r prod.txt
