@@ -1,8 +1,10 @@
 version: "3"
 services:
-    utility-power:
-        container_name: utility-power
-        build:
-            context: .
-            dockerfile: dockerfiles/Dockerfile
-        image: utility-power:latest
+  utility-power:
+    container_name: utility-power
+    build:
+      context: .
+      dockerfile: dockerfiles/Dockerfile
+    image: utility-power:latest
+    env_file:
+      - .env
